@@ -25,6 +25,7 @@ TITLE = """
   \/_____/   \/_____/   \/_____/   \/_/   \/_____/   \/_/\/_/   \/_____/     \/_/   \/_____/   \/_/     \/_____/   \/_/ /_/   \/_/  \/_/   \/_____/   \/_/ /_/ 
 """
 
+
 def get_data_for_forms():
     forms_data = get_data_for_forms_util()
 
@@ -90,9 +91,9 @@ def get_data_for_forms_util():
     full_data = []
     for i in range(len(private_keys)):
         full_data.append([
-            private_keys[i],
-            proofs[i],
-            f"@{contacts[i]}",
+            private_keys[i].strip(),
+            proofs[i].strip(),
+            f"@{contacts[i]}".strip(),
         ])
 
     return full_data
