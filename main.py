@@ -1,8 +1,11 @@
 import random
+import re
 import traceback
 
 import requests
 import time
+
+from eth_utils import to_checksum_address
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -50,6 +53,79 @@ def get_data_for_forms():
         random.shuffle(accounts_data)
 
     return accounts_data
+
+
+def verify_signature(driver, address, signature):
+    try:
+        driver.get('https://etherscan.io/verifiedSignatures#')
+
+        time.sleep(3)
+
+        verify_selector = '#btnVerifySignature'
+        address_selector = '#txtVerifyAddress'
+        msg_selector = '#txtVerifyMessage'
+        hash_selector = '#txtVerifyMessageHash'
+        option_selector = '#verifyAndPublish'
+        button_selector = '#btnSubmitVerifySignature'
+        id_selector = '#wave-bg > div > div > div:nth-child(1) > h1'
+
+        driver.find_element(
+            By.CSS_SELECTOR,
+            verify_selector
+        ).click()
+
+        time.sleep(5)
+
+        address_tab = driver.find_element(
+            By.CSS_SELECTOR,
+            address_selector
+        )
+        address_tab.send_keys(address)
+
+        time.sleep(0.1)
+
+        msg_tab = driver.find_element(
+            By.CSS_SELECTOR,
+            msg_selector
+        )
+        msg_tab.send_keys('RFI: I confirm that I own this wallet.')
+
+        time.sleep(0.1)
+
+        attest_proof_tab = driver.find_element(
+            By.CSS_SELECTOR,
+            hash_selector
+        )
+        attest_proof_tab.send_keys(signature)
+
+        time.sleep(0.1)
+
+        driver.find_element(
+            By.CSS_SELECTOR,
+            option_selector
+        ).click()
+
+        driver.find_element(
+            By.CSS_SELECTOR,
+            button_selector
+        ).click()
+
+        time.sleep(3)
+
+        current_url = driver.current_url
+
+        # Извлеките последние цифры из URL
+        match = re.search(r'/(\d+)$', current_url)
+        if match:
+            last_digits = match.group(1)
+            cprint(f"ID верифицированной сигнатуры: {last_digits}", 'light_green')
+            return last_digits
+        else:
+            cprint(f"Не смог найти ID", 'light_red')
+            raise RuntimeError
+
+    except Exception as error:
+        cprint(f"Не смог что-то найти на окне верификации{str(error)[:0]}", 'light_red')
 
 
 def get_signature_and_address(private_key):
@@ -122,9 +198,10 @@ def main():
             cprint(f"[{index}/{len(forms_data)}] | Начинаю работу с аккаунтом #{index}")
 
             while True:
-                driver.get('https://docs.google.com/forms/d/e/1FAIpQLSfdnxQvdt8QTjGODVCSnckk_f1dv_IFeaeUVXRfF__euyIZbw/viewform')
                 private_key, proof, contact = form_data
                 attest_hash, wallet_address = get_signature_and_address(private_key)
+                id_of_signature = verify_signature(driver=driver, address=wallet_address, signature=attest_hash)
+                driver.get('https://docs.google.com/forms/d/e/1FAIpQLSfdnxQvdt8QTjGODVCSnckk_f1dv_IFeaeUVXRfF__euyIZbw/viewform')
                 time.sleep(random.randint(*SLEEP_FOR_ACCOUNT))
                 try:
                     address_tab = driver.find_element(
@@ -147,7 +224,7 @@ def main():
                         By.CSS_SELECTOR,
                         ATTEST_PROOF_SELLECTOR
                     )
-                    attest_proof_tab.send_keys(attest_hash)
+                    attest_proof_tab.send_keys(id_of_signature)
 
                     time.sleep(0.1)
 
@@ -181,6 +258,7 @@ def main():
         time.sleep(1)
 
     except Exception as ex:
+        traceback.print_exc()
         cprint(f'{ex}', 'red')
         return
 
