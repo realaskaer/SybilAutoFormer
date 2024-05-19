@@ -118,56 +118,58 @@ def main():
 
         cprint(f"Успешно открыл браузер для отправки форм", 'light_green')
 
-        driver.get('https://docs.google.com/forms/d/e/1FAIpQLSfdnxQvdt8QTjGODVCSnckk_f1dv_IFeaeUVXRfF__euyIZbw/viewform')
-
         for index, form_data in enumerate(forms_data, 1):
             cprint(f"[{index}/{len(forms_data)}] | Начинаю работу с аккаунтом #{index}")
-            private_key, proof, contact = form_data
-            attest_hash, wallet_address = get_signature_and_address(private_key)
-            time.sleep(random.randint(*SLEEP_FOR_ACCOUNT))
-            try:
-                address_tab = driver.find_element(
-                    By.CSS_SELECTOR,
-                    WALLET_ADDRESS_SELLECTOR
-                )
-                address_tab.send_keys(wallet_address)
 
-                time.sleep(0.1)
+            while True:
+                driver.get('https://docs.google.com/forms/d/e/1FAIpQLSfdnxQvdt8QTjGODVCSnckk_f1dv_IFeaeUVXRfF__euyIZbw/viewform')
+                private_key, proof, contact = form_data
+                attest_hash, wallet_address = get_signature_and_address(private_key)
+                time.sleep(random.randint(*SLEEP_FOR_ACCOUNT))
+                try:
+                    address_tab = driver.find_element(
+                        By.CSS_SELECTOR,
+                        WALLET_ADDRESS_SELLECTOR
+                    )
+                    address_tab.send_keys(wallet_address)
 
-                proof_tab = driver.find_element(
-                    By.CSS_SELECTOR,
-                    PROOF_SELLECTOR
-                )
-                proof_tab.send_keys(proof)
+                    time.sleep(0.1)
 
-                time.sleep(0.1)
+                    proof_tab = driver.find_element(
+                        By.CSS_SELECTOR,
+                        PROOF_SELLECTOR
+                    )
+                    proof_tab.send_keys(proof)
 
-                attest_proof_tab = driver.find_element(
-                    By.CSS_SELECTOR,
-                    ATTEST_PROOF_SELLECTOR
-                )
-                attest_proof_tab.send_keys(attest_hash)
+                    time.sleep(0.1)
 
-                time.sleep(0.1)
+                    attest_proof_tab = driver.find_element(
+                        By.CSS_SELECTOR,
+                        ATTEST_PROOF_SELLECTOR
+                    )
+                    attest_proof_tab.send_keys(attest_hash)
 
-                contact_tab = driver.find_element(
-                    By.CSS_SELECTOR,
-                    CONTACT_SELLECTOR
-                )
-                contact_tab.send_keys(contact)
+                    time.sleep(0.1)
 
-                driver.find_element(
-                    By.CSS_SELECTOR,
-                    SEND_SELLECTOR
-                ).click()
+                    contact_tab = driver.find_element(
+                        By.CSS_SELECTOR,
+                        CONTACT_SELLECTOR
+                    )
+                    contact_tab.send_keys(contact)
 
-                time.sleep(2)
-            except Exception as error:
-                traceback.print_exc()
-                cprint(f"[{index}/{len(forms_data)}] | Не смог что-то найти на форме{str(error)[:0]}", 'light_red')
-                driver.refresh()
-                time.sleep(2)
-                break
+                    driver.find_element(
+                        By.CSS_SELECTOR,
+                        SEND_SELLECTOR
+                    ).click()
+
+                    time.sleep(2)
+                    break
+                except Exception as error:
+                    traceback.print_exc()
+                    cprint(f"[{index}/{len(forms_data)}] | Не смог что-то найти на форме{str(error)[:0]}", 'light_red')
+                    driver.refresh()
+                    time.sleep(2)
+                    break
 
             cprint(f"[{index}/{len(forms_data)}] | Успешно отправил форму для аккаунта #{index}", 'light_green')
             driver.refresh()
