@@ -12,7 +12,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from termcolor import cprint
 
-from settings import SLEEP_FOR_ACCOUNT, ADS_ACCOUNT_CODE, SLEEP_AFTER_SUBMITTING, SHUFFLE_WALLETS, WALLETS_TO_WORK
+from settings import SLEEP_FOR_ACCOUNT, ADS_ACCOUNT_CODE, SLEEP_AFTER_SUBMITTING, SHUFFLE_WALLETS, WALLETS_TO_WORK, \
+    WITHOUT_PRIVATE_KEYS
 
 WALLET_ADDRESS_SELLECTOR = '#mG61Hd > div.RH5hzf.RLS9Fe > div > div.o3Dpx > div:nth-child(1) > div > div > div.AgroKb > div > div.RpC4Ne.oJeWuf > div.Pc9Gce.Wic03c > textarea'
 PROOF_SELLECTOR = '#mG61Hd > div.RH5hzf.RLS9Fe > div > div.o3Dpx > div:nth-child(2) > div > div > div.AgroKb > div > div.RpC4Ne.oJeWuf > div.Pc9Gce.Wic03c > textarea'
@@ -29,8 +30,8 @@ TITLE = """
 """
 
 
-def get_data_for_forms():
-    forms_data = get_data_for_forms_util()
+def get_data_for_forms(software_mode):
+    forms_data = get_data_for_forms_util(software_mode)
 
     if WALLETS_TO_WORK == 0:
         return forms_data
@@ -148,9 +149,16 @@ def get_signature_and_address(private_key):
     return w3.to_hex(signature), address
 
 
-def get_data_for_forms_util():
-    with open('private_keys.txt') as file:
-        private_keys = file.readlines()
+def get_data_for_forms_util(without_private_keys: bool = False):
+    if without_private_keys:
+        with open('signatures.txt') as file:
+            signatures = file.readlines()
+
+        with open('addresses.txt') as file:
+            addresses = file.readlines()
+    else:
+        with open('private_keys.txt') as file:
+            private_keys = file.readlines()
 
     with open('proofs.txt') as file:
         proofs = file.readlines()
@@ -165,12 +173,20 @@ def get_data_for_forms_util():
     cprint(f"Получил данные для аккаунтов", 'light_green')
 
     full_data = []
-    for i in range(len(private_keys)):
-        full_data.append([
-            private_keys[i].strip(),
-            proofs[i].strip(),
-            f"@{contacts[i]}".strip(),
-        ])
+    for i in range(len(proofs)):
+        if without_private_keys:
+            full_data.append([
+                addresses[i].strip(),
+                signatures[i].strip(),
+                proofs[i].strip(),
+                f"@{contacts[i]}".strip(),
+            ])
+        else:
+            full_data.append([
+                private_keys[i].strip(),
+                proofs[i].strip(),
+                f"@{contacts[i]}".strip(),
+            ])
 
     return full_data
 
@@ -186,7 +202,9 @@ def main():
             cprint(f"Не смог запустить браузер по причине {resp['msg']}", 'light_red')
             return
 
-        forms_data = get_data_for_forms()
+        software_mode = WITHOUT_PRIVATE_KEYS
+
+        forms_data = get_data_for_forms(software_mode)
         chrome_driver = Service(resp["data"]["webdriver"])
         chrome_options = Options()
         chrome_options.add_experimental_option("debuggerAddress", resp["data"]["ws"]["selenium"])
@@ -198,9 +216,14 @@ def main():
             cprint(f"[{index}/{len(forms_data)}] | Начинаю работу с аккаунтом #{index}")
 
             while True:
-                private_key, proof, contact = form_data
-                attest_hash, wallet_address = get_signature_and_address(private_key)
-                id_of_signature = verify_signature(driver=driver, address=wallet_address, signature=attest_hash)
+                if not WITHOUT_PRIVATE_KEYS:
+                    private_key, proof, contact = form_data
+                    signature, wallet_address = get_signature_and_address(private_key)
+                else:
+                    wallet_address, signature, proof, contact = form_data
+
+                wallet_address = to_checksum_address(wallet_address)
+                id_of_signature = verify_signature(driver=driver, address=wallet_address, signature=signature)
                 driver.get('https://docs.google.com/forms/d/e/1FAIpQLSfdnxQvdt8QTjGODVCSnckk_f1dv_IFeaeUVXRfF__euyIZbw/viewform')
                 time.sleep(random.randint(*SLEEP_FOR_ACCOUNT))
                 try:
