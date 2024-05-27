@@ -166,9 +166,14 @@ def get_data_for_forms_util(without_private_keys: bool = False):
     with open('contacts.txt') as file:
         contacts = file.readlines()
 
-    if len(private_keys) != len(proofs) != len(contacts):
-        cprint(f"Ты уверен, что количество адресов, пруфов и контактов одинаковое?", 'red')
-        raise RuntimeError('Проблемы в считывании данных')
+    if without_private_keys:
+        if len(signatures) != len(addresses) != len(proofs) != len(contacts):
+            cprint(f"Ты уверен, что количество данных везде одинаковое?", 'red')
+            raise RuntimeError('Проблемы в считывании данных')
+    else:
+        if len(private_keys) != len(proofs) != len(contacts):
+            cprint(f"Ты уверен, что количество данных везде одинаковое?", 'red')
+            raise RuntimeError('Проблемы в считывании данных')
 
     cprint(f"Получил данные для аккаунтов", 'light_green')
 
